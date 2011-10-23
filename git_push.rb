@@ -1,7 +1,6 @@
 class GitPush
   attr_accessor :commits
 
-
   def initialize
     @commits = {}
     process_file
@@ -17,6 +16,7 @@ class GitPush
   def self.extract_author_name(author_line)
       email_start = author_line.index("<")
       email_stop = author_line.index("\n")
+      return "unknown" if email_start.nil?
       author_line[email_start + 1, email_stop - email_start - 2]
   end
 
@@ -32,11 +32,9 @@ class GitPush
   end
 
   def process_file
+    author_line, changed_line = nil, nil
 
-    author_line = nil
-    changed_line = nil
-
-    File.open("./small_sample.txt").each do |line|
+    File.open("./sample.txt").each do |line|
       author_line = line if line =~ /Author/
       changes_line = line if line =~ /files changed/
 
@@ -48,8 +46,30 @@ class GitPush
   end
 
   def display_output
+    rank_commits.each do |name, commit|
+      puts "#{commit.count} commits, #{commit.total} total, #{commit.inserts} additions,#{commit.deletes} deletions by #{name} "
+    end
+  end
+
+  def rank_commits
+    last_name = nil
+    ranked = []
     commits.each do |name, commit|
-      puts "#{commit.total} total, #{commit.inserts} additions,#{commit.deletes} deletions by #{name} "
+      num = commit.count
+      position = new_position(ranked, name, commit)
+      ranked.insert(position, [name, commit])
+    end
+    ranked
+  end
+
+  def new_position(ranked, name, commit)
+    return 0 if ranked == []
+    ranked.each_with_index do |rank, index|
+      if index == ranked.size - 1
+        return rank.last.count < commit.count ? index : index + 1
+      elsif rank.last.count < commit.count
+        return index
+      end
     end
   end
 
@@ -59,15 +79,15 @@ class GitPush
     c.update_commits(commit[:inserts], commit[:deletes])
     commits[committer] = c
   end
-
 end
 
 class Commit
-  attr_accessor :inserts, :deletes
+  attr_accessor :inserts, :deletes, :count
 
   def initialize
     self.inserts = 0
     self.deletes = 0
+    self.count = 0
   end
 
   def total
@@ -77,6 +97,7 @@ class Commit
   def update_commits(inserts, deletes)
     self.inserts += inserts
     self.deletes += deletes
+    self.count += 1
   end
 end
 
