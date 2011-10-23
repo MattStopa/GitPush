@@ -26,9 +26,9 @@ class GitPush
       comma_two = changes_line.index(",", comma_one.succ)
       deletions = changes_line.index("deletions")
 
-      insert_count = changes_line[comma_one.succ, insertions - comma_one.succ].strip.to_i
-      delete_count = changes_line[comma_two.succ, deletions - comma_two.succ].strip.to_i
-      [insert_count, delete_count]
+      insert_amount = changes_line[comma_one.succ, insertions - comma_one.succ].strip.to_i
+      delete_amount = changes_line[comma_two.succ, deletions - comma_two.succ].strip.to_i
+      [insert_amount, delete_amount]
   end
 
   def process_file
@@ -46,8 +46,10 @@ class GitPush
   end
 
   def display_output
+    rank = 1
     rank_commits.each do |name, commit|
-      puts "#{commit.count} commits, #{commit.total} total, #{commit.inserts} additions,#{commit.deletes} deletions by #{name} "
+      puts "RANK #{rank}, #{commit.amount} commits, #{commit.total} total, #{commit.inserts} additions,#{commit.deletes} deletions by #{name} "
+      rank += 1
     end
   end
 
@@ -55,19 +57,19 @@ class GitPush
     last_name = nil
     ranked = []
     commits.each do |name, commit|
-      num = commit.count
-      position = new_position(ranked, name, commit)
+      num = commit.amount
+      position = new_position(ranked, commit, :amount)
       ranked.insert(position, [name, commit])
     end
     ranked
   end
 
-  def new_position(ranked, name, commit)
+  def new_position(ranked, commit, sort_by = :amount)
     return 0 if ranked == []
     ranked.each_with_index do |rank, index|
-      if index == ranked.size - 1
-        return rank.last.count < commit.count ? index : index + 1
-      elsif rank.last.count < commit.count
+      if index == ranked.size.pred
+        return rank.last.send(sort_by) < commit.send(sort_by) ? index : index + 1
+      elsif rank.last.send(sort_by) < commit.send(sort_by)
         return index
       end
     end
@@ -82,12 +84,12 @@ class GitPush
 end
 
 class Commit
-  attr_accessor :inserts, :deletes, :count
+  attr_accessor :inserts, :deletes, :amount
 
   def initialize
     self.inserts = 0
     self.deletes = 0
-    self.count = 0
+    self.amount = 0
   end
 
   def total
@@ -97,7 +99,7 @@ class Commit
   def update_commits(inserts, deletes)
     self.inserts += inserts
     self.deletes += deletes
-    self.count += 1
+    self.amount += 1
   end
 end
 
