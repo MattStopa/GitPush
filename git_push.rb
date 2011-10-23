@@ -34,7 +34,7 @@ class GitPush
   def process_file
     author_line, changed_line = nil, nil
 
-    File.open("./sample.txt").each do |line|
+    File.open("./portal.txt").each do |line|
       author_line = line if line =~ /Author/
       changes_line = line if line =~ /files changed/
 
@@ -48,9 +48,25 @@ class GitPush
   def display_output
     rank = 1
     rank_commits.each do |name, commit|
-      puts "RANK #{rank}, #{commit.amount} commits, #{commit.total} total, #{commit.inserts} additions,#{commit.deletes} deletions by #{name} "
+      puts "RANK #{rank}, #{commit.amount} commits, #{commit.total} total, #{commit.inserts} additions, #{commit.deletes} deletions by #{name} "
       rank += 1
     end
+
+    sum = 0
+
+    amounts, totals, inserts, deletes = 0, 0, 0, 0
+
+    rank_commits.each do |name, commit|
+      argv = ARGV.inject { |str, element| str += "|" + element }
+
+      if name =~ /#{argv}/
+        amounts += commit.amount
+        totals += commit.total
+        inserts += commit.inserts
+        deletes += commit.deletes
+      end
+    end
+    puts "#{amounts} commits, #{totals} total, #{inserts} additions, #{deletes} deletions"
   end
 
   def rank_commits
