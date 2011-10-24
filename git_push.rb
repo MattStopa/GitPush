@@ -1,10 +1,33 @@
 class GitPush
-  attr_accessor :commits
+  attr_accessor :commits, :file_stats
 
   def initialize
     @commits = {}
-    process_file
-    display_output
+    @file_stats = {}
+
+    if ARGV.first == "stats"
+      generate_stats
+    else
+      process_file
+      display_output
+    end
+  end
+
+  def self.count_lines_of_code(file_name)
+    empty = 0
+    code = 0
+    comments = 0
+    puts file_name
+    File.open(file_name).each do |line|
+        if !(line =~ /[a-z]/)
+          empty += 1
+        elsif line.strip[0] == '#'
+          comments += 1
+        else
+          code += 1
+        end
+    end
+    { :empty => empty, :code => code, :comments => comments }
   end
 
   def self.extract_commit_info(author_line, changes_line)
@@ -31,6 +54,45 @@ class GitPush
       [insert_amount, delete_amount]
   end
 
+  def generate_stats
+    file_path = "./"
+    get_file_stats(file_path)
+    file_stats.each do |key, item|
+      puts "Extension: #{key}, #{item[:code]}, #{item[:empty]}, #{item[:comments]}"
+    end
+  end
+
+  def get_file_stats(file_path)
+    Dir.foreach(file_path) do |entry|
+      next if (entry == '.' || entry == '..' || entry[0] == '.')
+      if File.directory?(file_path + entry)
+        next if entry == "lib"
+        get_file_stats(file_path + entry + "/")
+      else
+        if entry.include?('.')
+          index = entry.size - entry.reverse.index('.')
+          extenstion = entry[index, entry.size]
+          extenstion = "none" if extenstion == "" || extenstion == nil
+
+          next if extenstion == 'log'
+
+          begin
+            loc = GitPush.count_lines_of_code(file_path + entry)
+          rescue
+            next
+          end
+          if file_stats[extenstion] == nil
+            file_stats[extenstion] = loc
+          else
+            file_stats[extenstion] = { :empty => file_stats[extenstion][:empty] + loc[:empty],
+                                       :code => file_stats[extenstion][:code] + loc[:code],
+                                       :comments => file_stats[extenstion][:comments] + loc[:comments] }
+          end
+        end
+      end
+    end
+  end
+
   def process_file
     author_line, changed_line = nil, nil
 
@@ -52,9 +114,7 @@ class GitPush
       rank += 1
     end
 
-    sum = 0
-
-    amounts, totals, inserts, deletes = 0, 0, 0, 0
+    amounts, totals, inserts, deletes, sum = 0, 0, 0, 0, 0
 
     rank_commits.each do |name, commit|
       argv = ARGV.inject { |str, element| str += "|" + element }
