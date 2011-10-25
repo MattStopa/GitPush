@@ -17,8 +17,8 @@ class GitStats
     file_stats
   end
 
-  def self.nativation_element?(entry)
-    (entry == '.' || entry == '..' || entry[0] == '.')
+  def self.nativation_element?(dir)
+    (dir == '.' || dir == '..' || dir[0] == '.')
   end
 
   def self.empty?(line)
@@ -44,11 +44,11 @@ class GitStats
   end
 
   def self.compile_statistics(file_path, entry)
-      begin
-        count_lines_of_code(file_path + entry)
-      rescue
-        return nil
-      end
+    begin
+      count_lines_of_code(file_path + entry)
+    rescue
+      return nil
+    end
   end
 
   def self.count_lines_of_code(file_name)
