@@ -1,5 +1,5 @@
 class Commit
-  attr_accessor :inserts, :deletes, :amount
+  attr_accessor :inserts, :deletes, :amount, :net
 
   def initialize
     self.inserts = 0
@@ -15,5 +15,9 @@ class Commit
     self.inserts += inserts
     self.deletes += deletes
     self.amount += 1
+  end
+
+  def net
+    inserts - deletes
   end
 end

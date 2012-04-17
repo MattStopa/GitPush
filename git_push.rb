@@ -1,6 +1,6 @@
-require './git_parse.rb'
-require './git_commit.rb'
-require './git_stats.rb'
+require File.dirname(__FILE__) + '/git_parse.rb'
+require File.dirname(__FILE__) + '/git_commit.rb'
+require File.dirname(__FILE__) + '/git_stats.rb'
 
 class GitPush
   attr_accessor :commits, :file_stats
@@ -28,9 +28,10 @@ class GitPush
   def process_file
     author_line, changed_line = nil, nil
 
-    File.open("./portal.txt").each do |line|
+    File.open(ARGV.first).each do |line|
       author_line = line if line =~ /Author/
       changes_line = line if line =~ /files changed/
+      date_line = line if line =~ /Date/
 
       if changes_line != nil
         add_commit(GitParse.extract_commit_info(author_line, changes_line))
@@ -39,18 +40,30 @@ class GitPush
     end
   end
 
+  def add_spaces(str, spaces)
+    if str.length < spaces
+      missing = spaces - str.length
+      missing.times { str << " " }
+    end
+    str
+  end
+
   def display_output
     rank = 1
     rank_commits.each do |name, commit|
-      puts "RANK #{rank}, #{commit.amount} commits, #{commit.total} total, #{commit.inserts} additions, #{commit.deletes} deletions by #{name} "
+      str = ""
+      puts "RANK #{rank}, #{commit.amount} commits, #{commit.total} total, #{commit.inserts} additions, #{commit.deletes} deletions, net #{commit.inserts - commit.deletes} by #{name} "
       rank += 1
     end
 
     amounts, totals, inserts, deletes, sum = 0, 0, 0, 0, 0
 
-    rank_commits.each do |name, commit|
-      argv = ARGV.inject { |str, element| str += "|" + element }
+    temp = ARGV.clone
+    temp.delete_at(0)
+    temp.delete_at(0)
+    argv = temp.inject { |str, element| str += "|" + element }
 
+    rank_commits.each do |name, commit|
       if name =~ /#{argv}/
         amounts += commit.amount
         totals += commit.total
@@ -58,7 +71,7 @@ class GitPush
         deletes += commit.deletes
       end
     end
-    puts "#{amounts} commits, #{totals} total, #{inserts} additions, #{deletes} deletions"
+    puts "#{amounts} commits, #{totals} total, #{inserts} additions, #{deletes} deletions, #{inserts - deletes} net effect"
   end
 
   def rank_commits
@@ -66,7 +79,7 @@ class GitPush
     ranked = []
     commits.each do |name, commit|
       num = commit.amount
-      position = new_position(ranked, commit, :amount)
+      position = new_position(ranked, commit, ARGV[1].to_sym)
       ranked.insert(position, [name, commit])
     end
     ranked
